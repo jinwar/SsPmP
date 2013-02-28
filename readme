@@ -1,0 +1,10 @@
+Project to pick and plot SsPmP phase to see the Moho thickness of the region
+
+data is stored in data folder
+
+run_taupsac.csh : write theretical arrival time of S phase in the sac header
+sac2eventmat.m : convert sac into mat format
+pick_S : pick phase for individual events
+plot_S : plot picking result for individual events
+plot_all : plot the moho thickness from all events
+
