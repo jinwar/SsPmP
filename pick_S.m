@@ -56,7 +56,7 @@ for i=1:size(mat,1)
 		end
 %		h = t./2./(Vp^(-2) - rayp^2);
 %		offset = mat(i,2);
-		offset = offset+1;
+		offset = i;
 		plot(t,data + offset);
 		plot(syndt,offset,'rx','markersize',15);
 		data(find(data<0)) = 0;
@@ -68,7 +68,7 @@ end
 title(event,'fontsize',20);
 
 while 1
-	[x,y,bot] = ginput(1);
+	[x,y,bot] = ginput(1)
 	pick_id = round(y);
 	if bot == 's'
 		sac(mat(pick_id,1)).T2 = sac(mat(pick_id,1)).T2 + x;

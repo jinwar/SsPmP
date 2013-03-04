@@ -4,7 +4,8 @@ function plot_S(event)
 
 beforetime = 10;
 aftertime = 20;
-filt = [0.02 0.5];
+avgtime = [-3 3];
+filt = [0.02 1];
 Vp = 6.5;
 
 load( ['eventmat/',event,'.mat'])
@@ -31,6 +32,7 @@ figure(43)
 clf
 hold on
 offset = 0;
+avgSS = 0;
 for i=1:size(mat,1)
 	id = mat(i,1);
 	if (sac(id).isgood)
@@ -57,8 +59,12 @@ for i=1:size(mat,1)
 		data(find(data<0)) = 0;
 		area(t,data + offset,offset);
 		text(t(1)-3,offset,sac(id).KSTNM);
+		ind = find(t>avgtime(1) & t < avgtime(2));
+		avgSS = avgSS + data(ind);
 	end
 end
+avgSS = avgSS./offset;
+avgSS = detrend(avgSS);
 %title(['Dist: ',num2str(avgdist),' Azi: ',num2str(avgazi)],'fontsize',20);
 	title(event,'fontsize',20);
 
@@ -99,6 +105,48 @@ xlim([-10 100])
 %title(['Dist: ',num2str(avgdist),' Azi: ',num2str(avgazi)],'fontsize',20);
 title(event,'fontsize',20);
 
+% plot deconvoluted waveform
+figure(47)
+clf
+hold on
+offset = 0;
+for i=1:size(mat,1)
+	id = mat(i,1);
+	if (sac(id).isgood)
+		taxis = sac(id).B:sac(id).DELTA:sac(id).B+sac(id).DELTA*(sac(id).NPTS-1);
+		ind = find(taxis > sac(id).T2 - beforetime & taxis < sac(id).T2 + aftertime);
+		data = sac(id).DATA1(ind);
+		fN = 1/sac(id).DELTA/2;
+		[b,a] = butter(2,[filt(1)/fN filt(2)/fN]);
+% 		data = deconv_wl(data,avgSS);
+        data = filtfilt(b,a,data);
+        [data lag] = xcorr(data,avgSS);
+        lag = lag*sac(id).DELTA;
+        lag = lag - beforetime -avgtime(1);
+		data = data./max(abs(data));
+%		data = data.*(max(mat(:,2))-min(mat(:,2)))/20;
+		t = -beforetime:sac(id).DELTA:aftertime;
+		syndt = sac(id).T1 - sac(id).T2;
+		t3dt = sac(id).T3 - sac(id).T2;
+		if length(t) > length(data)
+			t = t(1:length(data));
+		end
+		h = t./2./(Vp^(-2) - rayp^2);
+%		offset = mat(i,2);
+		offset = offset+1;
+        t = lag;
+		plot(t,data + offset);
+		plot(syndt,offset,'rx','markersize',15);
+		plot(t3dt,offset,'rv','markersize',15);
+		data(find(data<0)) = 0;
+		area(t,data + offset,offset);
+		text(t(1)-3,offset,sac(id).KSTNM);
+        xlim([-beforetime aftertime])
+	end
+end
+%title(['Dist: ',num2str(avgdist),' Azi: ',num2str(avgazi)],'fontsize',20);
+	title([event,': xcor'],'fontsize',20);
+
 % plot the map distribution of Moho Thickness
 lalim=[-11.2 -7.8];
 lolim=[148.8 152.5];
@@ -106,7 +154,6 @@ lolim=[148.8 152.5];
 hrange = [20 36];
 seiscmap = seiscmap(5:end,:);
 hx = linspace(hrange(1),hrange(2),size(seiscmap,1));
-
 figure(45)
 clf
 	ax = worldmap(lalim, lolim);
@@ -132,3 +179,4 @@ clf
 	colormap(seiscmap)
 	caxis(hrange);
 end
+
