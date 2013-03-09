@@ -12,7 +12,8 @@ load( ['eventmat/',event,'.mat'])
 for i=1:length(sac)
 	sac(i).isgood = 1;
 	sac(i).T2 = sac(i).T1;
+    sac(i).T3 = NaN;
 end
 
-save(['eventmat/',event,'.mat'],'sac')
+save(['eventmat/',event,'.mat'],'sac','sacR')
 

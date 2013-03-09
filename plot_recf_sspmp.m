@@ -5,6 +5,11 @@ clear;
 load seiscmap
 lalim=[-11 -7.8];
 lolim=[148.8 151.8];
+Vp = 6.5;
+beforetime = 10;
+aftertime = 20;
+filt = [0.02 0.5];
+
 
 amp = 1;
 pick_rad = 0.3;
@@ -29,11 +34,6 @@ for ie = 1:length(eventmatfiles)
 	if ~isfield(sac,'isgood')
 		continue;
 	end
-
-	beforetime = 10;
-	aftertime = 20;
-	filt = [0.02 0.5];
-	Vp = 6.5;
 
 	stlas = [sac.STLA];
 	stlos = [sac.STLO];
@@ -117,12 +117,37 @@ for ie = 1:length(eventmatfiles)
 	caxis(hrange);
 end
 
+[stnm reflon reflat refdepth] = textread('recf/moho_dep.dat','%s %f %f %f');
+for i=1:length(reflat)
+	pointnum = pointnum+1;
+	points(pointnum).lat = reflat(i);
+	points(pointnum).lon = reflon(i);
+	points(pointnum).stla = reflat(i);
+	points(pointnum).stlo = reflon(i);
+	points(pointnum).depth = refdepth(i);
+	pointcolor = interp1(hx,seiscmap,points(pointnum).depth,'nearest','extrap');
+	plotm(points(pointnum).lat,points(pointnum).lon,'ks','markerfacecolor',pointcolor,'markersize',20);
+end
+
+[stnm reflat reflon refdepth] = textread('recf/abers_dep.dat','%s %f %f %f');
+for i=1:length(reflat)
+	pointnum = pointnum+1;
+	points(pointnum).lat = reflat(i);
+	points(pointnum).lon = reflon(i);
+	points(pointnum).stla = reflat(i);
+	points(pointnum).stlo = reflon(i);
+	points(pointnum).depth = refdepth(i);
+	pointcolor = interp1(hx,seiscmap,points(pointnum).depth,'nearest','extrap');
+	plotm(points(pointnum).lat,points(pointnum).lon,'ks','markerfacecolor',pointcolor,'markersize',20);
+end
+
 gridsize = 0.1;
 xnode = lalim(1):gridsize:lalim(2);
 ynode = lolim(1):gridsize:lolim(2);
 plats = [points.lat];
 plons = [points.lon];
 depths = [points.depth];
+
 [dgrid,xi,yi] = gridfit(plats,plons,depths,xnode,ynode,'smooth',1);
 intd = griddata(plats,plons,depths,xi,yi);
 dgrid(find(isnan(intd))) = NaN;
@@ -140,100 +165,8 @@ set(ax, 'Visible', 'off')
 surfacem(xi,yi,dgrid);
 colorbar
 colormap(seiscmap)
-caxis([20 40])
+caxis(hrange)
 load pngcoastline
 geoshow([S.Lat], [S.Lon], 'Color', 'black','linewidth',1)
 
 
-while 1
-    figure(45)
-    [plat plon bot] = inputm(1);
-	if exist('an_h','var')
-		delete(an_h)
-		clear an_h;
-	end
-    dist = distance(plat,plon,plats,plons);
-    ind = find(dist < pick_rad);
-    if bot == 1
-       for i = 1:length(ind)
-           id = ind(i);
-           ie = points(id).ie;
-           disp([eventmatfiles(ie).name,',',points(id).stnm,':',...
-               num2str(points(id).depth)]);
-       end
-    end
-    if bot == 'q'
-        break;
-    end
-    if bot == 'o'
-        figure(89)
-		clf
-		hold on
-		keys = [points(ind).lon];
-		mat = [ind(:),keys(:)];
-		mat = sortrows(mat,2);
-		for i = 1:length(ind)
-			id = mat(i,1);
-			ie = points(id).ie;
-			t = points(id).t;
-			data = points(id).data;
-			dataR = points(id).dataR;
-			t3dt = points(id).t3dt;
-			syndt = points(id).syndt;
-			offset = i*2;
-			plot(t,data + offset);
-			data(find(data<0)) = 0;
-			area(t,data + offset,offset);
-			plot(t,dataR + offset,'r');
-			dataR(find(dataR>0)) = 0;
-			area(t,dataR + offset,offset,'facecolor','r');
-			plot(syndt,offset,'rx','markersize',15);
-			plot(t3dt,offset,'rv','markersize',15);
-			text(t(1),offset+0.5,[eventmatfiles(ie).name,',',points(id).stnm,':',...
-            num2str(points(id).depth)]);
-		end
-		figure(45)
-		[clat clon] = scircle1(plat,plon,pick_rad);
-		an_h = plotm(clat,clon,'r','linewidth',2);
-    end
-    if bot == 'p'
-		figure(45)
-		[clat clon] = scircle1(plat,plon,pick_rad);
-		an_h = plotm(clat,clon,'r','linewidth',2);
-		figure(89)
-		clf
-		hold on
-		for i = 1:length(ind)
-			id = ind(i);
-			ie = points(id).ie;
-			t = points(id).t;
-			data = points(id).data;
-			dataR = points(id).dataR;
-			t3dt = points(id).t3dt;
-			syndt = points(id).syndt;
-			offset = i*2;
-			plot(t,data + offset);
-			data(find(data<0)) = 0;
-			area(t,data + offset,offset);
-			plot(t,dataR + offset,'r');
-			dataR(find(dataR>0)) = 0;
-			area(t,dataR + offset,offset,'facecolor','r');
-			plot(syndt,offset,'rx','markersize',15);
-			plot(t3dt,offset,'rv','markersize',15);
-			text(t(1),offset+0.5,[eventmatfiles(ie).name,',',points(id).stnm,':',...
-            num2str(points(id).depth)]);
-		end
-		[x y] = ginput(1);
-		id = ind(round(y/2));
-		ie = points(id).ie;
-		pick_S(eventmatfiles(ie).name);
-    end
-    if bot == 'r'
-        [temp ind] = min(dist);
-        ind
-        id = ind; ie = points(id).ie;
-        disp([eventmatfiles(ie).name,',',points(id).stnm,':',...
-            num2str(points(id).depth)]);
-    end
-    disp(' ');
-end
